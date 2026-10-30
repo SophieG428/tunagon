@@ -8,6 +8,8 @@ import { useConfig } from "./state/store";
 import { setPresent } from "./state/liveState";
 import { PetalGrid } from "./ui/PetalGrid";
 import { PetalEditor } from "./ui/PetalEditor";
+import { TuningControls } from "./ui/TuningControls";
+import { TuningReadout } from "./ui/TuningReadout";
 import { DevPanel } from "./ui/DevPanel";
 
 type AudioState = "idle" | "loading" | "ready" | "error";
@@ -180,7 +182,9 @@ export default function App() {
 
       {state === "ready" && (
         <>
+          <TuningControls />
           <PetalGrid config={config} onSelect={setSelectedPetal} />
+          <TuningReadout />
           <DevPanel />
         </>
       )}

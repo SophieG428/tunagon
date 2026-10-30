@@ -2,6 +2,14 @@
 // MIDI monitor. (Event-log CSV and more land in later steps.)
 
 import { clearMonitor, getMonitor, useMonitorTick } from "../devhub/midiMonitor";
+import {
+  clearLog,
+  downloadLogCSV,
+  getLogCount,
+  isLogEnabled,
+  setLogEnabled,
+  useLogTick,
+} from "../devhub/eventLog";
 import { isForcedPresent, setPresent, useLiveTick } from "../state/liveState";
 
 const KEYBOARD_ROWS = [
@@ -13,7 +21,9 @@ const KEYBOARD_ROWS = [
 export function DevPanel() {
   useLiveTick();
   useMonitorTick();
+  useLogTick();
   const monitor = getMonitor();
+  const logCount = getLogCount();
   const recent = monitor.slice(-40).reverse();
 
   return (
@@ -61,6 +71,24 @@ export function DevPanel() {
             {e.text}
           </div>
         ))}
+      </div>
+
+      <div className="log-section">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={isLogEnabled()}
+            onChange={(e) => setLogEnabled(e.target.checked)}
+          />
+          Record event log
+        </label>
+        <span className="muted">{logCount} note{logCount === 1 ? "" : "s"}</span>
+        <button className="chip" onClick={downloadLogCSV} disabled={logCount === 0}>
+          Download CSV
+        </button>
+        <button className="link" onClick={clearLog} disabled={logCount === 0}>
+          clear
+        </button>
       </div>
     </section>
   );

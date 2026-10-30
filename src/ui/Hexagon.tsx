@@ -1,7 +1,8 @@
 // The petal hexagon: flat sides top and bottom, vertices at 3 and 9 o'clock.
-// Six triangles numbered 0..5 counter-clockwise from the upper-right triangle
-// (handoff 5.3). Triangle t shows physical key `physicalKey(t, layout)`, lights
-// while that key is down, with brightness following pressure.
+// Six triangles numbered 0..5 *clockwise* from the upper-right triangle
+// (Sophie's change 2026-10-29; handoff 5.3 originally specified counter-clockwise).
+// Triangle t shows physical key `physicalKey(t, layout)`, lights while that key
+// is down, with brightness following pressure.
 //
 // When `onKeyClick` is supplied the triangles become clickable (used by the
 // per-key editor); `selectedKey` outlines one physical key.
@@ -38,9 +39,10 @@ export function Hexagon({ cfg, size = 150, onKeyClick, selectedKey = null }: Hex
     const down = live.keysDown[k];
     const silent = note == null;
     const level = down ? Math.max(0.2, live.pressure / 127) : 0;
-    const a0 = 60 * t;
-    const a1 = 60 * (t + 1);
-    const mid = 60 * t + 30;
+    // Clockwise: t=0 upper-right [0,60], t=1 lower-right [-60,0], ... (screen y is down).
+    const a0 = -60 * t;
+    const a1 = -60 * t + 60;
+    const mid = -60 * t + 30;
     triangles.push({
       t,
       k,
