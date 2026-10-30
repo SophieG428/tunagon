@@ -10,7 +10,9 @@ import { PetalGrid } from "./ui/PetalGrid";
 import { PetalEditor } from "./ui/PetalEditor";
 import { TuningControls } from "./ui/TuningControls";
 import { TuningReadout } from "./ui/TuningReadout";
+import { HubStatus } from "./ui/HubStatus";
 import { DevPanel } from "./ui/DevPanel";
+import { midiInput } from "./midi/midiInput";
 
 type AudioState = "idle" | "loading" | "ready" | "error";
 
@@ -69,6 +71,14 @@ export default function App() {
         voice.handleMidi(bytes);
         pushMidi(bytes);
       });
+      // Real hub input → the same engine path as the virtual hub.
+      void midiInput.init(
+        (bytes) => {
+          voice.handleMidi(bytes);
+          pushMidi(bytes);
+        },
+        () => voice.panic(),
+      );
       setState("ready");
     } catch (e) {
       console.error(e);
@@ -136,18 +146,21 @@ export default function App() {
           <h1>Tunagon</h1>
           <p className="tagline">Modular instrument control &amp; adaptive tuning</p>
         </div>
-        <div className="audio-status">
-          {state === "ready" ? (
-            <span className="status-ready">
-              <span className="dot" /> Audio ready
-            </span>
-          ) : state === "loading" ? (
-            <span className="loading-label">Loading… {Math.round(progress * 100)}%</span>
-          ) : (
-            <button className="primary" onClick={startAudio}>
-              Start audio
-            </button>
-          )}
+        <div className="header-right">
+          {state === "ready" && <HubStatus />}
+          <div className="audio-status">
+            {state === "ready" ? (
+              <span className="status-ready">
+                <span className="dot" /> Audio ready
+              </span>
+            ) : state === "loading" ? (
+              <span className="loading-label">Loading… {Math.round(progress * 100)}%</span>
+            ) : (
+              <button className="primary" onClick={startAudio}>
+                Start audio
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
