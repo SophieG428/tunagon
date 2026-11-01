@@ -11,8 +11,10 @@ import { PetalEditor } from "./ui/PetalEditor";
 import { TuningControls } from "./ui/TuningControls";
 import { TuningReadout } from "./ui/TuningReadout";
 import { HubStatus } from "./ui/HubStatus";
+import { Logo } from "./ui/Logo";
 import { DevPanel } from "./ui/DevPanel";
 import { midiInput } from "./midi/midiInput";
+import * as takeRecorder from "./devhub/takeRecorder";
 
 type AudioState = "idle" | "loading" | "ready" | "error";
 
@@ -56,6 +58,48 @@ export default function App() {
     voiceRef.current?.releasePetal(petal);
   }
 
+  function tuningLabel() {
+    const t = config.tuning;
+    return t.mode === "ensemble" ? `ensemble-x${t.scale}` : "equal-temperament";
+  }
+
+  // Start/stop recording a take. While recording, also capture the live audio so
+  // the WAV of the tuning you played in is ready with no replay (and it lines up
+  // exactly with your video, since it IS the live performance).
+  function handleToggleRecord() {
+    const engine = engineRef.current;
+    if (!takeRecorder.isRecording()) {
+      takeRecorder.startRecording();
+      engine?.startWavCapture();
+    } else {
+      takeRecorder.stopRecording();
+      takeRecorder.setLastAudio(engine?.stopWavCapture() ?? null, tuningLabel());
+    }
+  }
+
+  // Replay the recorded take through the current tuning settings. If captureAudio,
+  // render the synth output to a WAV (named by the tuning) and save it.
+  function handleReplay(captureAudio: boolean) {
+    const voice = voiceRef.current;
+    const engine = engineRef.current;
+    if (!voice) return;
+    const label = tuningLabel();
+    const feed = (b: number[]) => voice.handleMidi(b);
+    const panic = () => voice.panic();
+    if (captureAudio && engine) {
+      engine.startWavCapture();
+      takeRecorder.replay(feed, {
+        panic,
+        onDone: () => {
+          takeRecorder.setLastAudio(engine.stopWavCapture(), label);
+          takeRecorder.saveLastAudio();
+        },
+      });
+    } else {
+      takeRecorder.replay(feed, { panic });
+    }
+  }
+
   async function startAudio() {
     if (state === "loading" || state === "ready") return;
     setState("loading");
@@ -70,12 +114,14 @@ export default function App() {
       hubRef.current = new VirtualHub((bytes) => {
         voice.handleMidi(bytes);
         pushMidi(bytes);
+        takeRecorder.capture(bytes);
       });
       // Real hub input → the same engine path as the virtual hub.
       void midiInput.init(
         (bytes) => {
           voice.handleMidi(bytes);
           pushMidi(bytes);
+          takeRecorder.capture(bytes);
         },
         () => voice.panic(),
       );
@@ -142,9 +188,12 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div>
-          <h1>Tunagon</h1>
-          <p className="tagline">Modular instrument control &amp; adaptive tuning</p>
+        <div className="brand">
+          <Logo />
+          <div>
+            <h1>Tuneagon</h1>
+            <p className="tagline">Modular instrument control &amp; adaptive tuning</p>
+          </div>
         </div>
         <div className="header-right">
           {state === "ready" && <HubStatus />}
@@ -198,7 +247,7 @@ export default function App() {
           <TuningControls />
           <PetalGrid config={config} onSelect={setSelectedPetal} />
           <TuningReadout />
-          <DevPanel />
+          <DevPanel onReplay={handleReplay} onToggleRecord={handleToggleRecord} />
         </>
       )}
 

@@ -61,3 +61,24 @@ export const GM_FAMILIES: GMFamily[] = [
 
 /** Favorites row for the instrument picker (handoff 5.1). */
 export const FAVORITE_PROGRAMS = [0, 24, 25, 27, 32, 33, 40, 41, 42, 43, 48, 52, 73, 71, 68, 56, 11, 12, 19];
+
+/** A specific instrument: a GM program on a given bank. bank 0 = standard GM. */
+export interface InstrumentPreset {
+  bank: number;
+  program: number;
+  name: string;
+}
+
+// Instruments that aren't standard GM but exist in GeneralUser GS as bank
+// variations (selected with a Bank Select, CC0). Verified present in
+// public/soundfonts/GeneralUser-GS.sf2.
+//   Ukulele = bank 8, program 24 (a real ukulele preset)
+export const EXTRA_PRESETS: InstrumentPreset[] = [
+  { bank: 8, program: 24, name: "Ukulele" },
+];
+
+/** Favorites row as full presets: the GM favorites (bank 0) plus the extras. */
+export const FAVORITE_PRESETS: InstrumentPreset[] = [
+  ...FAVORITE_PROGRAMS.map((p) => ({ bank: 0, program: p, name: GM_NAMES[p] })),
+  ...EXTRA_PRESETS,
+];

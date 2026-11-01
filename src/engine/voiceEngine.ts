@@ -41,6 +41,7 @@ export class VoiceEngine {
   private engine: SoundEngine;
   private freeChannels: number[]; // LRU: front = least recently released
   private channelProgram = new Map<number, number>();
+  private channelBank = new Map<number, number>();
   private voices = new Map<string, Voice>();
   private petalPressure = new Map<number, number>();
   private tuning: TuningEngine;
@@ -89,15 +90,17 @@ export class VoiceEngine {
     }
   }
 
-  private allocateChannel(program: number): number {
+  private allocateChannel(bank: number, program: number): number {
     if (this.freeChannels.length === 0) {
       // Steal the oldest sounding voice (sends its Note Off, frees its channel).
       let oldest: Voice | undefined;
       for (const v of this.voices.values()) if (!oldest || v.t0 < oldest.t0) oldest = v;
       if (oldest) this.releaseVoice(oldest, true);
     }
-    // Prefer a free channel already set to this program (avoids a program change).
-    let idx = this.freeChannels.findIndex((c) => this.channelProgram.get(c) === program);
+    // Prefer a free channel already set to this bank+program (avoids a program change).
+    let idx = this.freeChannels.findIndex(
+      (c) => this.channelProgram.get(c) === program && (this.channelBank.get(c) ?? 0) === bank,
+    );
     if (idx === -1) idx = 0; // otherwise least-recently-released
     const ch = this.freeChannels.splice(idx, 1)[0];
     return ch ?? VOICE_CHANNELS[0];
@@ -138,7 +141,8 @@ export class VoiceEngine {
     const now = performance.now();
     const velApp = this.remapVelocity(velocity, key);
     const program = cfg.instrument.program;
-    const channel = this.allocateChannel(program);
+    const bank = cfg.instrument.bank ?? 0;
+    const channel = this.allocateChannel(bank, program);
 
     // Role (from present petals' ranges) and approach are fixed at note-on.
     const role = this.roleFor(petal);
@@ -167,8 +171,12 @@ export class VoiceEngine {
     voice.onTotalCents = bdOn.total;
 
     // Order matters (handoff 6.2): program -> volume/pan -> bend -> CC11 -> Note On.
-    if (this.channelProgram.get(channel) !== program) {
+    // Non-GM instruments (e.g. Ukulele = bank 8) need a Bank Select (CC0) before
+    // the program change; GeneralUser GS selects its variations that way.
+    if (this.channelProgram.get(channel) !== program || (this.channelBank.get(channel) ?? 0) !== bank) {
+      this.engine.controllerChange(channel, 0, bank); // CC0 bank select
       this.engine.programChange(channel, program);
+      this.channelBank.set(channel, bank);
       this.channelProgram.set(channel, program);
     }
     this.engine.controllerChange(channel, 7, Math.round(cfg.volume * 127)); // CC7 volume

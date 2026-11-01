@@ -11,6 +11,19 @@ import {
   useLogTick,
 } from "../devhub/eventLog";
 import { isForcedPresent, setPresent, useLiveTick } from "../state/liveState";
+import {
+  clearTake,
+  eventCount,
+  exportTake,
+  hasLastAudio,
+  hasTake,
+  importTake,
+  isRecording,
+  isReplaying,
+  saveLastAudio,
+  takeDurationMs,
+  useTakeTick,
+} from "../devhub/takeRecorder";
 
 const KEYBOARD_ROWS = [
   { petal: 1, keys: "1 2 3 4 5 6" },
@@ -18,10 +31,17 @@ const KEYBOARD_ROWS = [
   { petal: 3, keys: "A S D F G H" },
 ];
 
-export function DevPanel() {
+export function DevPanel({
+  onReplay,
+  onToggleRecord,
+}: {
+  onReplay: (captureAudio: boolean) => void;
+  onToggleRecord: () => void;
+}) {
   useLiveTick();
   useMonitorTick();
   useLogTick();
+  useTakeTick();
   const monitor = getMonitor();
   const logCount = getLogCount();
   const recent = monitor.slice(-40).reverse();
@@ -89,6 +109,80 @@ export function DevPanel() {
         <button className="link" onClick={clearLog} disabled={logCount === 0}>
           clear
         </button>
+      </div>
+
+      <div className="take-section">
+        <div className="monitor-head">
+          <span>Take recorder — Ensemble / ET A·B</span>
+          {isReplaying() && <span className="muted">replaying…</span>}
+        </div>
+        <div className="take-controls">
+          {!isRecording() ? (
+            <button className="chip" onClick={onToggleRecord} disabled={isReplaying()}>
+              ● Record take
+            </button>
+          ) : (
+            <button className="chip on" onClick={onToggleRecord}>
+              ■ Stop recording
+            </button>
+          )}
+          <span className="muted">
+            {eventCount()} events
+            {hasTake() ? ` · ${(takeDurationMs() / 1000).toFixed(1)}s` : ""}
+          </span>
+          <button
+            className="chip"
+            onClick={saveLastAudio}
+            disabled={!hasLastAudio() || isRecording() || isReplaying()}
+          >
+            ⬇ Save WAV
+          </button>
+          <button className="link" onClick={clearTake} disabled={!hasTake() || isReplaying()}>
+            clear
+          </button>
+        </div>
+        <div className="take-controls">
+          <button
+            className="chip"
+            onClick={() => onReplay(false)}
+            disabled={!hasTake() || isRecording() || isReplaying()}
+          >
+            ▶ Replay
+          </button>
+          <button
+            className="chip"
+            onClick={() => onReplay(true)}
+            disabled={!hasTake() || isRecording() || isReplaying()}
+          >
+            ▶ Replay + save WAV (other tuning)
+          </button>
+        </div>
+        <div className="take-controls">
+          <button className="link" onClick={exportTake} disabled={!hasTake()}>
+            save take (.json)
+          </button>
+          <label className="link file-link">
+            load take
+            <input
+              type="file"
+              accept="application/json"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importTake(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+        <p className="hint">
+          Set the top switch to the tuning you'll perform in (e.g. <b>Ensemble ×2.5</b>),
+          hit <b>Record take</b>, play your song, then <b>Stop</b>. Click <b>Save WAV</b> —
+          that's the audio captured live, no replay, and it lines up with your video.
+          For the comparison track, flip the switch to <b>Equal temperament</b> and hit{" "}
+          <b>Replay + save WAV</b>. The two files are the same performance, so they match
+          note-for-note. Don't touch the instrument or keyboard during a replay.
+        </p>
       </div>
     </section>
   );

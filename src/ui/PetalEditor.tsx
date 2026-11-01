@@ -8,7 +8,13 @@ import {
   defaultPetalConfig,
 } from "../state/config";
 import { configStore, useConfig } from "../state/store";
-import { FAVORITE_PROGRAMS, GM_FAMILIES, GM_NAMES } from "../midi/gmInstruments";
+import {
+  EXTRA_PRESETS,
+  FAVORITE_PRESETS,
+  GM_FAMILIES,
+  GM_NAMES,
+  type InstrumentPreset,
+} from "../midi/gmInstruments";
 import { PITCH_CLASSES, SCALES, fillScale } from "../midi/scales";
 import { computeRoles } from "../tuning/roles";
 import { isPresent, useLiveTick } from "../state/liveState";
@@ -38,6 +44,11 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
 
   const presentIds = [1, 2, 3, 4, 5, 6].filter(isPresent);
   const role = computeRoles(config, presentIds).get(petalId);
+  // What "Auto" would resolve to for this petal (ignoring its own override).
+  const autoRole = computeRoles(
+    { ...config, petals: { ...config.petals, [petalId]: { ...cfg, roleOverride: "auto" } } },
+    presentIds,
+  ).get(petalId);
 
   // Keyboard: Escape closes; arrows nudge the selected key.
   useEffect(() => {
@@ -70,13 +81,17 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
     onPetalChanged(petalId);
   }
 
-  function pickInstrument(program: number) {
+  function pickInstrument(preset: InstrumentPreset) {
     configStore.updatePetal(petalId, {
-      instrument: { bank: 0, program, name: GM_NAMES[program] },
-      expressionMode: defaultExpressionMode(program),
+      instrument: { bank: preset.bank, program: preset.program, name: preset.name },
+      expressionMode: defaultExpressionMode(preset.program),
     });
     onPetalChanged(petalId);
   }
+
+  // A favorite/list button is "on" only when both bank and program match.
+  const isCurrent = (pr: InstrumentPreset) =>
+    cfg.instrument.program === pr.program && (cfg.instrument.bank ?? 0) === pr.bank;
 
   function doFill() {
     const scale = SCALES.find((s) => s.id === scaleId) ?? SCALES[0];
@@ -93,6 +108,12 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
       }
       return { fam, programs };
     }).filter((g) => g.programs.length > 0);
+  }, [search]);
+
+  // Non-GM extras (Ukulele, Flugelhorn) surfaced in the search list too.
+  const filteredExtras = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return EXTRA_PRESETS.filter((pr) => !q || pr.name.toLowerCase().includes(q));
   }, [search]);
 
   const cur = cfg.keys[selectedKey];
@@ -122,13 +143,13 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
           <h3>Instrument</h3>
           <div className="now">{cfg.instrument.name}</div>
           <div className="favorites">
-            {FAVORITE_PROGRAMS.map((p) => (
+            {FAVORITE_PRESETS.map((pr) => (
               <button
-                key={p}
-                className={`chip${cfg.instrument.program === p ? " on" : ""}`}
-                onClick={() => pickInstrument(p)}
+                key={`${pr.bank}:${pr.program}`}
+                className={`chip${isCurrent(pr) ? " on" : ""}`}
+                onClick={() => pickInstrument(pr)}
               >
-                {GM_NAMES[p]}
+                {pr.name}
               </button>
             ))}
           </div>
@@ -139,14 +160,28 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="instrument-list">
+            {filteredExtras.length > 0 && (
+              <div className="family">
+                <div className="family-name">More (GeneralUser GS)</div>
+                {filteredExtras.map((pr) => (
+                  <button
+                    key={`${pr.bank}:${pr.program}`}
+                    className={`inst${isCurrent(pr) ? " on" : ""}`}
+                    onClick={() => pickInstrument(pr)}
+                  >
+                    {pr.name}
+                  </button>
+                ))}
+              </div>
+            )}
             {filteredFamilies.map(({ fam, programs }) => (
               <div key={fam.name} className="family">
                 <div className="family-name">{fam.name}</div>
                 {programs.map((p) => (
                   <button
                     key={p}
-                    className={`inst${cfg.instrument.program === p ? " on" : ""}`}
-                    onClick={() => pickInstrument(p)}
+                    className={`inst${(cfg.instrument.bank ?? 0) === 0 && cfg.instrument.program === p ? " on" : ""}`}
+                    onClick={() => pickInstrument({ bank: 0, program: p, name: GM_NAMES[p] })}
                   >
                     {GM_NAMES[p]}
                   </button>
@@ -298,23 +333,25 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
         {/* Tuning role */}
         <section className="ed-block">
           <h3>Tuning role</h3>
-          <div className="row">
-            <span className="now">{role ? role : "—"}</span>
-            <label>
-              Override
-              <select
-                value={cfg.roleOverride}
-                onChange={(e) =>
-                  configStore.updatePetal(petalId, { roleOverride: e.target.value as RoleOverride })
-                }
+          <p className="muted">
+            Which voice this petal plays in the Ensemble tuning (top is tuned sharp,
+            inner flat, bass/solo neutral). <b>Auto</b> picks it from the petal's pitch —
+            highest&nbsp;=&nbsp;top, lowest&nbsp;=&nbsp;bass. Tap one to force it.
+          </p>
+          <div className="role-picker">
+            {ROLE_OPTIONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`chip${cfg.roleOverride === r ? " on" : ""}`}
+                onClick={() => configStore.updatePetal(petalId, { roleOverride: r })}
               >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {r === "auto" ? `Auto${autoRole ? ` · ${autoRole}` : ""}` : r}
+              </button>
+            ))}
+          </div>
+          <div className="muted">
+            Playing as: <b>{role ?? "—"}</b>
           </div>
         </section>
 

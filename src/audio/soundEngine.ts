@@ -85,11 +85,59 @@ async function fetchArrayBufferWithProgress(
   return out.buffer;
 }
 
+/** Encode captured Float32 L/R chunks into a 16-bit PCM stereo WAV blob. */
+function encodeWav(
+  lChunks: Float32Array[],
+  rChunks: Float32Array[],
+  totalLen: number,
+  sampleRate: number,
+): Blob {
+  const numCh = 2;
+  const bytesPerSample = 2;
+  const dataLen = totalLen * numCh * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataLen);
+  const view = new DataView(buffer);
+  const writeStr = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataLen, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true); // fmt chunk size
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numCh, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numCh * bytesPerSample, true); // byte rate
+  view.setUint16(32, numCh * bytesPerSample, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeStr(36, "data");
+  view.setUint32(40, dataLen, true);
+
+  let offset = 44;
+  for (let c = 0; c < lChunks.length; c++) {
+    const l = lChunks[c];
+    const r = rChunks[c];
+    for (let i = 0; i < l.length; i++) {
+      const sl = Math.max(-1, Math.min(1, l[i]));
+      const sr = Math.max(-1, Math.min(1, r[i]));
+      view.setInt16(offset, sl < 0 ? sl * 0x8000 : sl * 0x7fff, true);
+      view.setInt16(offset + 2, sr < 0 ? sr * 0x8000 : sr * 0x7fff, true);
+      offset += 4;
+    }
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
 export class SoundEngine {
   context: AudioContext | null = null;
   synth: WorkletSynthesizer | null = null;
   masterGain: GainNode | null = null;
   ready = false;
+  private captureNode: ScriptProcessorNode | null = null;
+  private capL: Float32Array[] = [];
+  private capR: Float32Array[] = [];
+  private capLen = 0;
 
   /** True once audio is running and the SoundFont is loaded. */
   get running(): boolean {
@@ -147,6 +195,50 @@ export class SoundEngine {
 
   setMasterVolume(v: number): void {
     if (this.masterGain) this.masterGain.gain.value = Math.max(0, Math.min(1, v));
+  }
+
+  /** Start capturing the master output to PCM for a WAV render. Taps masterGain
+   *  without affecting the speakers (the capture node outputs silence). */
+  startWavCapture(): void {
+    const ctx = this.context;
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    this.stopCaptureNode();
+    this.capL = [];
+    this.capR = [];
+    this.capLen = 0;
+    const node = ctx.createScriptProcessor(4096, 2, 2);
+    node.onaudioprocess = (e) => {
+      const l = e.inputBuffer.getChannelData(0);
+      const r = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : l;
+      this.capL.push(new Float32Array(l));
+      this.capR.push(new Float32Array(r));
+      this.capLen += l.length;
+      // leave the output buffer untouched (silent) so we don't double the audio
+    };
+    master.connect(node);
+    node.connect(ctx.destination);
+    this.captureNode = node;
+  }
+
+  /** Stop capturing and return the recording as a 16-bit stereo WAV blob. */
+  stopWavCapture(): Blob | null {
+    const ctx = this.context;
+    this.stopCaptureNode();
+    if (!ctx || this.capLen === 0) return null;
+    const blob = encodeWav(this.capL, this.capR, this.capLen, ctx.sampleRate);
+    this.capL = [];
+    this.capR = [];
+    this.capLen = 0;
+    return blob;
+  }
+
+  private stopCaptureNode(): void {
+    if (this.captureNode) {
+      this.captureNode.disconnect();
+      this.captureNode.onaudioprocess = null;
+      this.captureNode = null;
+    }
   }
 
   // --- Low-level MIDI, used by the full engine in later steps ---
