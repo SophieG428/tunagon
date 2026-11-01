@@ -1,4 +1,4 @@
-// Tunagon sound engine — wraps spessasynth_lib's WorkletSynthesizer.
+// Tuneagon sound engine — wraps spessasynth_lib's WorkletSynthesizer.
 //
 // Audio graph:  WorkletSynthesizer (output 0 = main stereo mix)
 //                 -> [FX chain inserted here in a later step] -> masterGain -> destination

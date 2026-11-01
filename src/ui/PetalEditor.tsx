@@ -1,5 +1,5 @@
 // Petal editor (handoff 5.1): name, instrument, scale-fill, per-key notes,
-// expression, volume/pan, tuning role, and test keys. Opens for one petal.
+// tuning role, and test keys. Opens for one petal.
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -288,46 +288,6 @@ export function PetalEditor({ petalId, onClose, onTestKey, onPetalChanged }: Pro
               </div>
             </div>
           </div>
-        </section>
-
-        {/* Expression + volume/pan */}
-        <section className="ed-block">
-          <h3>Expression</h3>
-          <div className="row">
-            <div className="segmented">
-              {(["swell", "fixed"] as const).map((m) => (
-                <button
-                  key={m}
-                  className={cfg.expressionMode === m ? "on" : ""}
-                  onClick={() => configStore.updatePetal(petalId, { expressionMode: m })}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-          <label className="slider">
-            Volume {Math.round(cfg.volume * 100)}%
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={cfg.volume}
-              onChange={(e) => configStore.updatePetal(petalId, { volume: Number(e.target.value) })}
-            />
-          </label>
-          <label className="slider">
-            Pan {cfg.pan === 0 ? "C" : cfg.pan < 0 ? `L${Math.round(-cfg.pan * 100)}` : `R${Math.round(cfg.pan * 100)}`}
-            <input
-              type="range"
-              min={-1}
-              max={1}
-              step={0.01}
-              value={cfg.pan}
-              onChange={(e) => configStore.updatePetal(petalId, { pan: Number(e.target.value) })}
-            />
-          </label>
         </section>
 
         {/* Tuning role */}

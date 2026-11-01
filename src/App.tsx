@@ -259,14 +259,6 @@ export default function App() {
           onPetalChanged={handlePetalChanged}
         />
       )}
-
-      <footer className="app-footer">
-        <p>
-          Phase&nbsp;1A · Check&nbsp;B — the virtual hub plays through the
-          configured petals and the triangles light. Next: the petal editor
-          (instruments, scales, per-key notes).
-        </p>
-      </footer>
     </div>
   );
 }

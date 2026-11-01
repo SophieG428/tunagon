@@ -128,7 +128,7 @@ export class VoiceEngine {
   private noteOn(ch1: number, note: number, velocity: number) {
     const inv = invertHubTable(ch1, note);
     if (!inv) {
-      console.debug("Tunagon: unknown (channel, note)", ch1, note);
+      console.debug("Tuneagon: unknown (channel, note)", ch1, note);
       return;
     }
     const { petal, key } = inv;

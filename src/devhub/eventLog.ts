@@ -81,7 +81,7 @@ export function downloadLogCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `tunagon-events-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+  a.download = `tuneagon-events-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

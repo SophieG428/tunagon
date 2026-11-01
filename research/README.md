@@ -1,4 +1,4 @@
-# Tunagon tuning research
+# Tuneagon tuning research
 
 This folder holds the research behind the app's **Ensemble** tuning mode: how real ensembles bend pitch away from equal temperament, and the code used to measure it. The app's tuning engine (`src/tuning/`) is built directly from the v3 findings below.
 

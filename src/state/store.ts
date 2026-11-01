@@ -37,7 +37,7 @@ class ConfigStore {
         };
       }
     } catch (e) {
-      console.warn("Tunagon: could not load saved config, using defaults.", e);
+      console.warn("Tuneagon: could not load saved config, using defaults.", e);
     }
     return defaultAppConfig();
   }
@@ -64,7 +64,7 @@ class ConfigStore {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config));
       } catch (e) {
-        console.warn("Tunagon: could not save config.", e);
+        console.warn("Tuneagon: could not save config.", e);
       }
     }, 300);
   }

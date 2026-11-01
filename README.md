@@ -1,9 +1,9 @@
-# Tunagon App
+# Tuneagon App
 
-Web app (Chrome) that controls the Tunagon modular instrument: shows the petals
+Web app (Chrome) that controls the Tuneagon modular instrument: shows the petals
 that are plugged into the hub, lets you set each petal's instrument and the note
 on each of its 6 keys, plays built-in sounds, and applies the **Adaptive Tuning**
-research engine. Built per `../Tunagon_App_Handoff.md`.
+research engine.
 
 ## Run it (dev)
 

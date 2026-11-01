@@ -1,4 +1,4 @@
-"""v2 training/evaluation: Tunagon-phase protocol (AT_RESEARCH_NEXT_STEPS.md).
+"""v2 training/evaluation: Tuneagon-phase protocol (AT_RESEARCH_NEXT_STEPS.md).
 
 Adds to v1:
   - third frame 'det' (per-take intercept AND slope removed)      [Step 1]

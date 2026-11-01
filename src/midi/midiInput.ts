@@ -70,7 +70,7 @@ class MidiInputManager {
     try {
       this.access = await navigator.requestMIDIAccess({ sysex: true });
     } catch (e) {
-      console.warn("Tunagon: MIDI access denied or unavailable.", e);
+      console.warn("Tuneagon: MIDI access denied or unavailable.", e);
       this.emit({ statusKind: "denied" });
       return;
     }

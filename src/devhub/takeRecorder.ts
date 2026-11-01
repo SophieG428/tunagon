@@ -125,7 +125,7 @@ function teardownReplay(): void {
 /** Store the most recently rendered WAV so it can be saved without replaying. */
 export function setLastAudio(blob: Blob | null, label: string): void {
   lastAudioBlob = blob;
-  lastAudioName = blob ? `tunagon-${label}-${stamp()}.wav` : "";
+  lastAudioName = blob ? `tuneagon-${label}-${stamp()}.wav` : "";
   emit();
 }
 export function hasLastAudio(): boolean {
@@ -140,7 +140,7 @@ export function saveLastAudio(): void {
 
 export function exportTake(): void {
   const blob = new Blob([JSON.stringify({ version: 1, events })], { type: "application/json" });
-  download(blob, `tunagon-take-${stamp()}.json`);
+  download(blob, `tuneagon-take-${stamp()}.json`);
 }
 
 export async function importTake(file: File): Promise<void> {
