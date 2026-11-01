@@ -64,3 +64,9 @@ src/App.tsx                             UI
 - **Phase 1A · Check A — a piano note sounds.** ✅ (current)
 - Next: hub-table inversion + settings model + `localStorage`, then the sound
   engine with channel rotation and the virtual hub (Check B).
+
+## Research
+
+The tuning research behind the Ensemble mode (findings, measured note table, and analysis code) is in [`research/`](research/README.md).
+
+Live site: https://sophieg428.github.io/tunagon/
